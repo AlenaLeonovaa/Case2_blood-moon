@@ -8,7 +8,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Кровавая Луна")
 clock = pygame.time.Clock()
 
-# === ФОН (один для всех экранов) ===
+# === ФОН ===
 background = pygame.image.load("assets/background.PNG")
 background = pygame.transform.scale(background, (WIDTH, HEIGHT))
 
@@ -51,14 +51,16 @@ FONT_BUTTON   = pygame.font.SysFont("arial", 22)
 
 # === СОСТОЯНИЯ ЭКРАНА ===
 SCREEN_START = "start"
+SCREEN_LORE  = "lore"
 SCREEN_RULES = "rules"
 SCREEN_GAME  = "game"
 current_screen = SCREEN_START
 
-# === КНОПКИ СТАРТОВОГО ЭКРАНА ===
+# === КНОПКИ ===
 start_btn = pygame.Rect(WIDTH // 2 - 180, 360, 360, 60)
 rules_btn = pygame.Rect(WIDTH // 2 - 180, 440, 360, 60)
 back_btn  = pygame.Rect(WIDTH // 2 - 100, HEIGHT - 70, 200, 46)
+lore_continue_btn = pygame.Rect(WIDTH // 2 - 150, HEIGHT - 80, 300, 50)
 
 # === ФЕЙКОВЫЕ ИГРОКИ ===
 players = [
@@ -98,6 +100,16 @@ def draw_text_centered(surface, text, rect, font, color):
     y = rect.y + (rect.height - surf.get_height()) // 2
     surface.blit(surf, (x, y))
 
+def draw_panel(rect, alpha=200, border_color=None):
+    """Рисует полупрозрачную панель со скруглением и рамкой."""
+    surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    surf.fill((32, 32, 42, alpha))
+    screen.blit(surf, (rect.x, rect.y))
+    if border_color:
+        pygame.draw.rect(screen, border_color, rect, 2, border_radius=16)
+    else:
+        pygame.draw.rect(screen, (60, 60, 80), rect, 2, border_radius=16)
+
 def make_action_buttons():
     buttons = []
     bw, bh, sp = 200, 50, 20
@@ -131,33 +143,88 @@ action_buttons = make_action_buttons()
 continue_rect = pygame.Rect(0, 0, 200, 50)
 continue_rect.center = (WIDTH // 2 + 150, 400)
 
+
 # === СТАРТОВЫЙ ЭКРАН ===
 def draw_start(mouse_pos):
     screen.blit(background, (0, 0))
 
-    # затемнение
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-    overlay.fill((0, 0, 0, 120))
+    overlay.fill((0, 0, 0, 130))
     screen.blit(overlay, (0, 0))
 
-    # заголовок
     title = FONT_HUGE.render("КРОВАВАЯ ЛУНА", True, TEXT)
     screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 200))
 
-    # подзаголовок
-    sub = FONT_SUB.render("Хроники Четырёх Земель", True, PLAYER1)
-    screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, 280))
+    pygame.draw.line(screen, PLAYER1, (WIDTH // 2 - 260, 280), (WIDTH // 2 + 260, 280), 3)
 
-    # кнопка НАЧАТЬ ИГРУ
+    sub = FONT_SUB.render("Хроники Четырёх Земель", True, (200, 200, 210))
+    screen.blit(sub, (WIDTH // 2 - sub.get_width() // 2, 295))
+
     color = BUTTON_HOVER if start_btn.collidepoint(mouse_pos) else BUTTON
     pygame.draw.rect(screen, color, start_btn, border_radius=8)
+    pygame.draw.rect(screen, PLAYER1, start_btn, 2, border_radius=8)
     draw_text_centered(screen, "НАЧАТЬ ИГРУ", start_btn, FONT_BUTTON, TEXT)
 
-    # кнопка ПРАВИЛА
     color = BUTTON_HOVER if rules_btn.collidepoint(mouse_pos) else BUTTON
     pygame.draw.rect(screen, color, rules_btn, border_radius=8)
+    pygame.draw.rect(screen, (100, 100, 130), rules_btn, 2, border_radius=8)
     draw_text_centered(screen, "ПРАВИЛА", rules_btn, FONT_BUTTON, TEXT)
-    
+
+
+# === ЭКРАН ЛЕГЕНДЫ ===
+LORE_LINES = [
+    "Много веков четыре могущественные фракции",
+    "скрывались во тьме.",
+    "",
+    "Вампиры  •  Оборотни  •  Ведьмы  •  Охотники",
+    "",
+    "Но в ночь Кровавой Луны древний баланс",
+    "был разрушен.",
+    "",
+    "Каждое королевство стремится захватить земли,",
+    "укрепить власть и пережить наступление врагов.",
+    "",
+    "Но Луна не прощает слабости.",
+    "Только одна фракция станет хозяином нового мира.",
+]
+
+def draw_lore(mouse_pos):
+    screen.blit(background, (0, 0))
+
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 190))
+    screen.blit(overlay, (0, 0))
+
+    # Панель с рамкой
+    panel = pygame.Rect(180, 100, WIDTH - 360, HEIGHT - 230)
+    draw_panel(panel, alpha=210, border_color=PLAYER1)
+
+    # Заголовок
+    title = FONT_HUGE.render("ЛЕГЕНДА", True, TEXT)
+    screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 55))
+
+    # Красная линия + подсветка под заголовком
+    pygame.draw.line(screen, PLAYER1, (WIDTH // 2 - 220, 130), (WIDTH // 2 + 220, 130), 3)
+    pygame.draw.line(screen, (220, 80, 80), (WIDTH // 2 - 180, 134), (WIDTH // 2 + 180, 134), 1)
+
+    # Текст
+    y = 175
+    for line in LORE_LINES:
+        if line:
+            if "Вампиры" in line and "Оборотни" in line:
+                surf = FONT_SUB.render(line, True, PLAYER1)
+            else:
+                surf = FONT_RESOURCE.render(line, True, TEXT)
+            screen.blit(surf, (WIDTH // 2 - surf.get_width() // 2, y))
+        y += 32
+
+    # Кнопка
+    color = BUTTON_HOVER if lore_continue_btn.collidepoint(mouse_pos) else BUTTON
+    pygame.draw.rect(screen, color, lore_continue_btn, border_radius=8)
+    pygame.draw.rect(screen, PLAYER1, lore_continue_btn, 2, border_radius=8)
+    draw_text_centered(screen, "ПРОДОЛЖИТЬ", lore_continue_btn, FONT_BUTTON, TEXT)
+
+
 # === ЭКРАН ПРАВИЛ ===
 def draw_rules(mouse_pos):
     screen.blit(background, (0, 0))
@@ -166,70 +233,77 @@ def draw_rules(mouse_pos):
     overlay.fill((0, 0, 0, 200))
     screen.blit(overlay, (0, 0))
 
-    title = FONT_TITLE.render("ПРАВИЛА ИГРЫ", True, TEXT)
-    screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 20))
-    pygame.draw.line(screen, PLAYER1, (WIDTH // 2 - 200, 60), (WIDTH // 2 + 200, 60), 2)
+    title = FONT_HUGE.render("ПРАВИЛА", True, TEXT)
+    screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 18))
+    pygame.draw.line(screen, PLAYER1, (WIDTH // 2 - 220, 82), (WIDTH // 2 + 220, 82), 3)
 
-    panel = pygame.Rect(60, 80, WIDTH - 120, HEIGHT - 165)
-    pygame.draw.rect(screen, PANEL, panel, border_radius=16)
+    # Две панели с рамкой
+    left_panel  = pygame.Rect(40, 105, WIDTH // 2 - 60, HEIGHT - 205)
+    right_panel = pygame.Rect(WIDTH // 2 + 20, 105, WIDTH // 2 - 60, HEIGHT - 205)
+    draw_panel(left_panel, alpha=210, border_color=(60, 60, 80))
+    draw_panel(right_panel, alpha=210, border_color=(60, 60, 80))
 
-    left_x, right_x = 90, WIDTH // 2 + 15
-    y_left, y_right = 100, 100
+    left_x, right_x = 70, WIDTH // 2 + 50
+    y_left, y_right = 130, 130
 
     def section(x, y, header, lines):
-        screen.blit(FONT_SUB.render(header, True, PLAYER1), (x, y))
-        yy = y + 28
+        # Цветная полоска слева от заголовка
+        pygame.draw.rect(screen, PLAYER1, (x - 12, y + 4, 4, 20))
+        screen.blit(FONT_SUB.render(header, True, TEXT), (x, y))
+        yy = y + 30
         for line in lines:
-            screen.blit(FONT_LOG.render(line, True, TEXT), (x, yy))
+            screen.blit(FONT_LOG.render(line, True, (200, 200, 210)), (x, yy))
             yy += 20
-        return yy + 12
+        return yy + 14
 
     y_left = section(left_x, y_left, "ЦЕЛЬ ИГРЫ", [
-        "Побеждает тот, кто первый наберёт 30 престижа.",
-        "Если все выбыли кроме одного — он побеждает.",
+        "Первый набрал 30 престижа — победил.",
+        "Остался последним живым — победил.",
         "После 20 ходов — побеждает с макс. престижем.",
     ])
     y_left = section(left_x, y_left, "РЕСУРСЫ (старт)", [
-        "Пропитание 10 — еда, влияет на выживание",
-        "Деньги 10 — валюта для сделок",
-        "Земля 5 — территории, дают доход",
-        "Народ 10 — сородичи, стая, ковен, отряд",
-        "Смута 0 — безумие, при 10 — смерть",
+        "🍞 Пропитание 10 — еда, влияет на выживание",
+        "💰 Деньги 10 — валюта для сделок",
+        "🌑 Земля 5 — территории, дают доход",
+        "👥 Народ 10 — сородичи, стая, ковен, отряд",
+        "🔥 Смута 0 — безумие, при 10 — смерть",
     ])
-    y_left = section(left_x, y_left, "ДОХОД (в начале хода)", [
+    y_left = section(left_x, y_left, "ДОХОД В НАЧАЛЕ ХОДА", [
         "+1 пропитание за каждые 2 земли",
         "+1 деньги за каждые 5 народа",
     ])
     y_left = section(left_x, y_left, "ФОРМУЛА ПРЕСТИЖА", [
-        "престиж = земля×2 + деньги//5 + народ//5 − смута",
-        "Деление целочисленное.",
+        "земля×2 + деньги//5 + народ//5 − смута",
     ])
 
-    y_right = section(right_x, y_right, "ДЕЙСТВИЯ (1 за ход)", [
-        "Союз −1 пропитание: у обоих −1 смуты (1 ход)",
-        "Торговля −3 деньги: +3 пропитания себе",
-        "Набег −1 народ: у цели −2 пропитания, +1 смуты",
-        "Подкуп −3 деньги: у цели −2 смуты",
-        "Раздор −2 деньги: у цели +2 смуты",
+    y_right = section(right_x, y_right, "ДЕЙСТВИЯ", [
+        "Союз: −1 еда → обоим −1 смуты",
+        "Торговля: −3 деньги → +3 еды",
+        "Набег: −1 народ → у цели −2 еды, +1 смуты",
+        "Подкуп: −3 деньги → у цели −2 смуты",
+        "Раздор: −2 деньги → у цели +2 смуты",
     ])
-    y_right = section(right_x, y_right, "СОБЫТИЯ (1 за ход, случайно)", [
-        "Пожар, Затмение, Эпидемия, Полная луна,",
-        "Инквизиция, Травник.",
-        "Исход случаен: позитив / негатив (50/50).",
+    y_right = section(right_x, y_right, "СОБЫТИЯ (случайные)", [
+        "Пожар, Затмение, Эпидемия,",
+        "Полная луна, Инквизиция, Травник.",
+        "Исход 50/50: позитив или негатив.",
     ])
     y_right = section(right_x, y_right, "ХОД ИГРОКА", [
         "1. Доход с земли и народа.",
         "2. Случайное событие.",
         "3. Действие (+ цель).",
-        "4. Пересчёт престижа, проверка смертей и победы.",
+        "4. Пересчёт престижа, проверка смертей.",
     ])
     y_right = section(right_x, y_right, "СМЕРТЬ ИГРОКА", [
-        "Смута ≥ 10 — безумие. Народ ≤ 0 — вымирание.",
+        "Смута ≥ 10 — безумие.",
+        "Народ ≤ 0 — вымирание.",
     ])
 
     color = BUTTON_HOVER if back_btn.collidepoint(mouse_pos) else BUTTON
     pygame.draw.rect(screen, color, back_btn, border_radius=8)
+    pygame.draw.rect(screen, (100, 100, 130), back_btn, 2, border_radius=8)
     draw_text_centered(screen, "← НАЗАД", back_btn, FONT_BUTTON, TEXT)
+
 
 # === ИГРОВОЙ ЭКРАН ===
 def draw_game(mouse_pos, clicked, click_pos):
@@ -328,6 +402,7 @@ def draw_game(mouse_pos, clicked, click_pos):
                     game_state = STATE_EVENT
                     break
 
+
 # === ГЛАВНЫЙ ЦИКЛ ===
 running = True
 while running:
@@ -346,9 +421,14 @@ while running:
         draw_start(mouse_pos)
         if clicked:
             if start_btn.collidepoint(click_pos):
-                current_screen = SCREEN_GAME
+                current_screen = SCREEN_LORE
             elif rules_btn.collidepoint(click_pos):
                 current_screen = SCREEN_RULES
+
+    elif current_screen == SCREEN_LORE:
+        draw_lore(mouse_pos)
+        if clicked and lore_continue_btn.collidepoint(click_pos):
+            current_screen = SCREEN_GAME
 
     elif current_screen == SCREEN_RULES:
         draw_rules(mouse_pos)
