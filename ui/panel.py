@@ -22,7 +22,7 @@ def draw_header(screen, player_name, player_color, turn_number, fonts):
 
 
 def draw_resources_panel(screen, player, icons, fonts):
-    """Рисует панель с 6 ресурсами игрока (объект Player)."""
+    """Рисует панель с 6 ресурсами (объект Player)."""
     y_top = 66
     pygame.draw.rect(screen, COLORS["panel"], (0, y_top, WINDOW_WIDTH, 80))
 
