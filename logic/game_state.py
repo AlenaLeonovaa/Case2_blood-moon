@@ -10,7 +10,7 @@ from config import (
     INCOME_PEOPLE_DIVISOR,
 )
 
-from logic.events_pool import ACTIONS, apply_event, roll_event
+from logic.events_pool import apply_event, roll_event
 from models.player import Player
 
 
@@ -148,6 +148,10 @@ class GameState:
                 f"{alive[0].name} победил!"
             )
 
+            return
+
+
+        if not alive:
             return
 
 
