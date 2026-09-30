@@ -24,7 +24,7 @@ def action_trade(actor, target):
 
 def action_raid(actor, target):
     """A3: Набег — −1 народ, у цели −2 пропитания, +1 смуты себе."""
-    actor.people -= 1
+    actor.people = max(0, actor.people - 1)
     target.food = max(0, target.food - 2)
     actor.smuta += 1
     return f"{actor.name} совершил набег на {target.name}"
@@ -40,7 +40,7 @@ def action_bribe(actor, target):
 def action_discord(actor, target):
     """A5: Раздор — −2 деньги, у цели +2 смуты."""
     actor.money -= 2
-    target.smuta += 2
+    target.smuta = min(10, target.smuta + 2)
     return f"{actor.name} посеял раздор в {target.name}"
 
 
