@@ -45,9 +45,8 @@ def draw_resources_panel(screen, player, icons, fonts):
         screen.blit(label_surf, (rx, y_top + 52))
         rx += 190
 
-
 def draw_log_panel(screen, messages, fonts):
-    """Рисует панель лога событий."""
+    """Рисует панель лога событий. messages — список строк."""
     log_rect = pygame.Rect(20, 170, 400, 400)
     pygame.draw.rect(screen, COLORS["panel"], log_rect, border_radius=12)
 
@@ -55,7 +54,15 @@ def draw_log_panel(screen, messages, fonts):
     screen.blit(header, (40, 190))
 
     ly = 240
-    for msg, color in messages:
+    for msg in messages:
+        # Автоопределение цвета по содержимому
+        if "+" in msg and "−" not in msg and "-" not in msg:
+            color = COLORS["positive"]
+        elif "−" in msg or "-" in msg:
+            color = COLORS["negative"]
+        else:
+            color = COLORS["text"]
+
         line = fonts["log"].render(f"> {msg}", True, color)
         screen.blit(line, (40, ly))
         ly += 30
