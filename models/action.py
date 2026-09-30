@@ -1,21 +1,21 @@
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Optional
 
 
 @dataclass
 class Action:
-    """Управляемое действие игрока.
+    """
+    Описание действия игрока.
 
-    Attributes:
-        id: идентификатор действия (A1-A5).
-        title: название действия.
-        cost: словарь стоимости, например {"money": 3}.
-        target_required: True, если нужно выбрать цель.
-        apply: функция(actor, target) -> str, возвращает лог.
+    Каждое действие содержит:
+    - название;
+    - стоимость;
+    - нужна ли цель;
+    - функцию применения.
     """
 
     id: str
     title: str
     cost: dict
     target_required: bool
-    apply: Callable
+    apply: Optional[Callable] = None
