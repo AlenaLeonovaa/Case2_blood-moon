@@ -61,6 +61,7 @@ FONT_LOG_SIZE = 18
 
 # Панель ресурсов
 PANEL_HEIGHT = 80
+ICON_SIZE = 32
 
 # Лог
 LOG_WIDTH = 400
