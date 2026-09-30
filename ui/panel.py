@@ -40,7 +40,7 @@ def draw_resources_panel(screen, player, icons, fonts):
         screen.blit(icons[key], (rx, y_top + 16))
         color = COLORS["negative"] if (key == "smuta" and value >= 7) else COLORS["text"]
         val_surf = fonts["resource"].render(str(value), True, color)
-        screen.blit(val_surf, (rx + ICON_SIZE_LOCAL + 10, y_top + 18))
+        screen.blit(val_surf, (rx + ICON_SIZE + 10, y_top + 18))
         label_surf = fonts["log"].render(label, True, (150, 150, 160))
         screen.blit(label_surf, (rx, y_top + 52))
         rx += 190
@@ -59,5 +59,3 @@ def draw_log_panel(screen, messages, fonts):
         line = fonts["log"].render(f"> {msg}", True, color)
         screen.blit(line, (40, ly))
         ly += 30
-
-ICON_SIZE_LOCAL = 32
