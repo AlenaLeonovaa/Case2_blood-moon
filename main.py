@@ -8,6 +8,8 @@ from config import (
     TARGET_BUTTON_WIDTH, TARGET_BUTTON_HEIGHT,
     LOG_MAX_MESSAGES, ICON_SIZE,
 )
+from logic.game_state import GameState
+from logic.events_pool import ACTIONS
 from ui.panel import draw_header, draw_resources_panel, draw_log_panel
 from ui.event_modal import draw_event_modal
 
@@ -46,28 +48,16 @@ fonts = {
     "button":   pygame.font.SysFont("arial", 22),
 }
 
-# === ЦВЕТА ФРАКЦИЙ ===
-PLAYER_COLORS = [COLORS["player1"], COLORS["player2"], COLORS["player3"], COLORS["player4"]]
-PLAYER_NAMES = ["ВАМПИРЫ", "ОБОРОТНИ", "ВЕДЬМЫ", "ОХОТНИКИ"]
-
 # === СОСТОЯНИЯ ЭКРАНА ===
 SCREEN_START = "start"
 SCREEN_LORE  = "lore"
 SCREEN_RULES = "rules"
 SCREEN_GAME  = "game"
+SCREEN_OVER  = "over"
 current_screen = SCREEN_START
 
-# === ФЕЙКОВЫЕ ИГРОКИ ===
-players = [
-    {"name": "ВАМПИРЫ",  "food": 10, "money": 10, "land": 5, "people": 10, "smuta": 0, "prestige": 12},
-    {"name": "ОБОРОТНИ", "food": 10, "money": 10, "land": 5, "people": 10, "smuta": 0, "prestige": 12},
-    {"name": "ВЕДЬМЫ",   "food": 10, "money": 10, "land": 5, "people": 10, "smuta": 0, "prestige": 12},
-    {"name": "ОХОТНИКИ", "food": 10, "money": 10, "land": 5, "people": 10, "smuta": 0, "prestige": 12},
-]
-
-current_player = 0
-turn_number = 1
-log_messages = [("Добро пожаловать!", COLORS["text"])]
+# === ИГРА ===
+state = GameState()
 
 # === СОСТОЯНИЯ ХОДА ===
 STATE_EVENT  = "event"
@@ -75,20 +65,17 @@ STATE_ACTION = "action"
 STATE_TARGET = "target"
 game_state = STATE_EVENT
 
-# === ДЕЙСТВИЯ ===
-ACTIONS = [
-    {"id": "alliance", "title": "Союз",     "cost": {"food": 1},   "target": True},
-    {"id": "trade",    "title": "Торговля", "cost": {"money": 3},  "target": False},
-    {"id": "raid",     "title": "Набег",    "cost": {"people": 1}, "target": True},
-    {"id": "bribe",    "title": "Подкуп",   "cost": {"money": 3},  "target": True},
-    {"id": "discord",  "title": "Раздор",   "cost": {"money": 2},  "target": True},
-]
+# Текущее событие (для модалки)
+current_event = None
+current_event_log = ""
 
-def can_afford(player, action):
-    return all(player[res] >= cost for res, cost in action["cost"].items())
-
-event = {"title": "ПОЖАР", "effect": "−3 food, −1 land"}
+# Выбранное действие (для STATE_TARGET)
 current_action = None
+
+# Цвета для лога (парсим по префиксу)
+LOG_COLOR_NEG = COLORS["negative"]
+LOG_COLOR_POS = COLORS["positive"]
+LOG_COLOR_DEF = COLORS["text"]
 
 
 # === ХЕЛПЕРЫ ===
@@ -109,9 +96,25 @@ def draw_panel(rect, alpha=200, border_color=None):
         pygame.draw.rect(screen, (60, 60, 80), rect, 2, border_radius=16)
 
 
+def get_player_color(player):
+    """Возвращает RGB-цвет игрока по его color_key."""
+    return COLORS.get(player.color_key, COLORS["text"])
+
+
+def log_color(message):
+    """Определяет цвет строки лога по её содержимому."""
+    if "−" in message or "-" in message:
+        # Есть минус — возможно негативное
+        if "+" not in message:
+            return LOG_COLOR_NEG
+    if "+" in message:
+        return LOG_COLOR_POS
+    return LOG_COLOR_DEF
+
+
 def make_action_buttons():
     buttons = []
-    total = 5 * BUTTON_WIDTH + 4 * BUTTON_SPACING
+    total = len(ACTIONS) * BUTTON_WIDTH + (len(ACTIONS) - 1) * BUTTON_SPACING
     sx = (WINDOW_WIDTH - total) // 2
     for i, action in enumerate(ACTIONS):
         x = sx + i * (BUTTON_WIDTH + BUTTON_SPACING)
@@ -122,22 +125,14 @@ def make_action_buttons():
 
 def make_target_buttons():
     buttons = []
-    others = [i for i in range(4) if i != current_player]
-    total = 3 * TARGET_BUTTON_WIDTH + 2 * BUTTON_SPACING
+    others = [p for p in state.players if p is not state.current_player and not p.is_dead]
+    total = len(others) * TARGET_BUTTON_WIDTH + (len(others) - 1) * BUTTON_SPACING
     sx = (WINDOW_WIDTH - total) // 2
-    for i, target_idx in enumerate(others):
+    for i, target in enumerate(others):
         x = sx + i * (TARGET_BUTTON_WIDTH + BUTTON_SPACING)
         rect = pygame.Rect(x, 620, TARGET_BUTTON_WIDTH, TARGET_BUTTON_HEIGHT)
-        buttons.append({"rect": rect, "target": target_idx})
+        buttons.append({"rect": rect, "target": target})
     return buttons
-
-
-def add_log(msg, color=None):
-    if color is None:
-        color = COLORS["text"]
-    log_messages.insert(0, (msg, color))
-    if len(log_messages) > LOG_MAX_MESSAGES:
-        log_messages.pop()
 
 
 action_buttons = make_action_buttons()
@@ -149,6 +144,7 @@ start_btn_rect  = pygame.Rect(WINDOW_WIDTH // 2 - 180, 360, 360, 60)
 rules_btn_rect  = pygame.Rect(WINDOW_WIDTH // 2 - 180, 440, 360, 60)
 back_btn_rect   = pygame.Rect(WINDOW_WIDTH // 2 - 100, WINDOW_HEIGHT - 70, 200, 46)
 lore_continue_rect = pygame.Rect(WINDOW_WIDTH // 2 - 150, WINDOW_HEIGHT - 80, 300, 50)
+over_btn_rect = pygame.Rect(WINDOW_WIDTH // 2 - 150, WINDOW_HEIGHT - 120, 300, 50)
 
 
 # === СТАРТОВЫЙ ЭКРАН ===
@@ -193,18 +189,17 @@ LORE_LINES = [
     "Но Луна не прощает слабости.",
     "Только одна фракция станет хозяином нового мира.",
 ]
+
+
 def draw_lore(mouse_pos):
     screen.blit(background, (0, 0))
-
     overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 200))
     screen.blit(overlay, (0, 0))
 
-    # Заголовок
     title = fonts["huge"].render("ЛЕГЕНДА", True, COLORS["text"])
     screen.blit(title, (WINDOW_WIDTH // 2 - title.get_width() // 2, 30))
 
-    # Двойная линия
     pygame.draw.line(screen, COLORS["player1"],
                      (WINDOW_WIDTH // 2 - 260, 105),
                      (WINDOW_WIDTH // 2 + 260, 105), 3)
@@ -212,14 +207,12 @@ def draw_lore(mouse_pos):
                      (WINDOW_WIDTH // 2 - 200, 111),
                      (WINDOW_WIDTH // 2 + 200, 111), 1)
 
-    # Панель
     panel = pygame.Rect(140, 135, WINDOW_WIDTH - 280, 470)
     surf = pygame.Surface((panel.width, panel.height), pygame.SRCALPHA)
     surf.fill((20, 20, 28, 220))
     screen.blit(surf, (panel.x, panel.y))
     pygame.draw.rect(screen, COLORS["player1"], panel, 2, border_radius=16)
 
-    # Текст — единый шрифт, без выделений
     y = 170
     for line in LORE_LINES:
         if line:
@@ -228,13 +221,13 @@ def draw_lore(mouse_pos):
                         (WINDOW_WIDTH // 2 - surf_text.get_width() // 2, y))
         y += 28
 
-    # Кнопка
     color = COLORS["button_hover"] if lore_continue_rect.collidepoint(mouse_pos) else COLORS["button"]
     pygame.draw.rect(screen, color, lore_continue_rect, border_radius=8)
     pygame.draw.rect(screen, COLORS["player1"], lore_continue_rect, 2, border_radius=8)
     draw_text_centered(screen, "ПРОДОЛЖИТЬ", lore_continue_rect,
                        fonts["button"], COLORS["text"])
-    
+
+
 # === ЭКРАН ПРАВИЛ ===
 def draw_rules(mouse_pos):
     screen.blit(background, (0, 0))
@@ -316,26 +309,31 @@ def draw_rules(mouse_pos):
 
 # === ИГРОВОЙ ЭКРАН ===
 def draw_game(mouse_pos, clicked, click_pos):
-    global game_state, current_player, turn_number, current_action
+    global game_state, current_event, current_event_log, current_action
 
     screen.blit(background, (0, 0))
 
-    player = players[current_player]
-    player_color = PLAYER_COLORS[current_player]
+    player = state.current_player
+    player_color = get_player_color(player)
 
-    draw_header(screen, player["name"], player_color, turn_number, fonts)
+    draw_header(screen, player.name, player_color, state.turn, fonts)
     draw_resources_panel(screen, player, icons, fonts)
-    draw_log_panel(screen, log_messages, fonts)
+    draw_log_panel(screen, state.log, fonts)
 
     if game_state == STATE_EVENT:
-        draw_event_modal(screen, event, mouse_pos, continue_rect, fonts)
+        # Модалка события
+        event_dict = {
+            "title": current_event.title if current_event else "СОБЫТИЕ",
+            "effect": current_event_log,
+        }
+        draw_event_modal(screen, event_dict, mouse_pos, continue_rect, fonts)
         if clicked and continue_rect.collidepoint(click_pos):
             game_state = STATE_ACTION
 
     elif game_state == STATE_ACTION:
         for btn in action_buttons:
             hover = btn["rect"].collidepoint(mouse_pos)
-            afford = can_afford(player, btn["action"])
+            afford = player.can_afford(btn["action"].cost)
             if not afford:
                 color = COLORS["disabled"]
             elif hover:
@@ -343,7 +341,7 @@ def draw_game(mouse_pos, clicked, click_pos):
             else:
                 color = COLORS["button"]
             pygame.draw.rect(screen, color, btn["rect"], border_radius=8)
-            draw_text_centered(screen, btn["action"]["title"], btn["rect"],
+            draw_text_centered(screen, btn["action"].title, btn["rect"],
                                fonts["button"], COLORS["text"])
 
         hint = fonts["resource"].render("Выберите действие", True, COLORS["text"])
@@ -351,49 +349,100 @@ def draw_game(mouse_pos, clicked, click_pos):
 
         if clicked:
             for btn in action_buttons:
-                if btn["rect"].collidepoint(click_pos) and can_afford(player, btn["action"]):
+                if btn["rect"].collidepoint(click_pos) and player.can_afford(btn["action"].cost):
                     action = btn["action"]
-                    if action["target"]:
+                    if action.target_required:
                         current_action = action
                         game_state = STATE_TARGET
                     else:
-                        add_log(f"{player['name']}: {action['title']}")
-                        current_player = (current_player + 1) % 4
-                        turn_number += 1
-                        game_state = STATE_EVENT
+                        state.apply_action(action, target=None)
+                        state.check_deaths()
+                        state.check_winner()
+                        if state.is_game_over:
+                            current_screen_global()
+                        else:
+                            state.next_turn()
+                            start_new_turn()
                     break
 
     elif game_state == STATE_TARGET:
         hint = fonts["resource"].render(
-            f"Выберите цель для «{current_action['title']}»", True, COLORS["text"],
+            f"Выберите цель для «{current_action.title}»", True, COLORS["text"],
         )
         screen.blit(hint, (WINDOW_WIDTH // 2 - hint.get_width() // 2, 580))
 
         target_buttons = make_target_buttons()
         for btn in target_buttons:
-            t = btn["target"]
+            target = btn["target"]
             hover = btn["rect"].collidepoint(mouse_pos)
-            color = PLAYER_COLORS[t]
+            color = get_player_color(target)
             if hover:
                 color = tuple(min(c + 40, 255) for c in color)
             pygame.draw.rect(screen, color, btn["rect"], border_radius=8)
-            draw_text_centered(screen, PLAYER_NAMES[t], btn["rect"],
+            draw_text_centered(screen, target.name, btn["rect"],
                                fonts["log"], COLORS["text"])
 
         if clicked:
             for btn in target_buttons:
                 if btn["rect"].collidepoint(click_pos):
-                    target = btn["target"]
-                    add_log(f"{player['name']} → {current_action['title']} → {PLAYER_NAMES[target]}")
-                    current_player = (current_player + 1) % 4
-                    turn_number += 1
-                    game_state = STATE_EVENT
+                    state.apply_action(current_action, btn["target"])
+                    state.check_deaths()
+                    state.check_winner()
+                    if state.is_game_over:
+                        current_screen_global()
+                    else:
+                        state.next_turn()
+                        start_new_turn()
                     break
+
+
+def start_new_turn():
+    """Начинает новый ход: доход + событие."""
+    global current_event, current_event_log, game_state
+    event, is_positive, log_message = state.start_turn()
+    current_event = event
+    current_event_log = log_message
+    game_state = STATE_EVENT
+
+
+# === ЭКРАН ПОБЕДЫ/ПОРАЖЕНИЯ ===
+def draw_game_over(mouse_pos):
+    global current_screen
+    screen.blit(background, (0, 0))
+    overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 220))
+    screen.blit(overlay, (0, 0))
+
+    if state.winner:
+        title = fonts["huge"].render("ПОБЕДА!", True, COLORS["positive"])
+        screen.blit(title, (WINDOW_WIDTH // 2 - title.get_width() // 2, 200))
+
+        name = fonts["title"].render(f"{state.winner.name}", True, get_player_color(state.winner))
+        screen.blit(name, (WINDOW_WIDTH // 2 - name.get_width() // 2, 300))
+
+        prest = fonts["resource"].render(
+            f"Престиж: {state.winner.prestige}", True, COLORS["text"])
+        screen.blit(prest, (WINDOW_WIDTH // 2 - prest.get_width() // 2, 350))
+    else:
+        title = fonts["huge"].render("ИГРА ОКОНЧЕНА", True, COLORS["text"])
+        screen.blit(title, (WINDOW_WIDTH // 2 - title.get_width() // 2, 200))
+
+    color = COLORS["button_hover"] if over_btn_rect.collidepoint(mouse_pos) else COLORS["button"]
+    pygame.draw.rect(screen, color, over_btn_rect, border_radius=8)
+    pygame.draw.rect(screen, COLORS["player1"], over_btn_rect, 2, border_radius=8)
+    draw_text_centered(screen, "ИГРАТЬ СНОВА", over_btn_rect, fonts["button"], COLORS["text"])
+
+
+def current_screen_global():
+    """Переключает на экран победы."""
+    global current_screen
+    current_screen = SCREEN_OVER
 
 
 # === ГЛАВНЫЙ ЦИКЛ ===
 def main():
-    global current_screen
+    global current_screen, game_state
+
     running = True
     while running:
         mouse_pos = pygame.mouse.get_pos()
@@ -419,6 +468,7 @@ def main():
             draw_lore(mouse_pos)
             if clicked and lore_continue_rect.collidepoint(click_pos):
                 current_screen = SCREEN_GAME
+                start_new_turn()
 
         elif current_screen == SCREEN_RULES:
             draw_rules(mouse_pos)
@@ -428,10 +478,19 @@ def main():
         elif current_screen == SCREEN_GAME:
             draw_game(mouse_pos, clicked, click_pos)
 
+        elif current_screen == SCREEN_OVER:
+            draw_game_over(mouse_pos)
+            if clicked and over_btn_rect.collidepoint(click_pos):
+                # Перезапуск
+                state.__init__()
+                game_state = STATE_EVENT
+                current_screen = SCREEN_START
+
         pygame.display.flip()
         clock.tick(FPS)
 
     pygame.quit()
+
 
 if __name__ == "__main__":
     main()
