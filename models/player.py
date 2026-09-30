@@ -50,7 +50,7 @@ class Player:
         self.smuta = START_SMUTA
 
         # Союзник (используется позже для механики союза)
-        self.ally = None
+        self.alliance_with = None
 
 
     @property
