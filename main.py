@@ -10,7 +10,7 @@ from config import (
 )
 from logic.game_state import GameState
 from logic.events_pool import ACTIONS
-from ui.panel import draw_header, draw_resources_panel, draw_log_panel
+from ui.panel import draw_header, draw_players_panel, draw_log_panel
 from ui.event_modal import draw_event_modal
 
 
@@ -38,14 +38,23 @@ icons = {
     "prestige": load_icon("prestige"),
 }
 
+# Маленькие иконки 24×24 для карточек фракций
+icons_small = {
+    key: pygame.transform.smoothscale(img, (24, 24))
+    for key, img in icons.items()
+}
+
 # === ШРИФТЫ ===
 fonts = {
-    "huge":     pygame.font.SysFont("arial", 56, bold=True),
-    "title":    pygame.font.SysFont("arial", FONT_TITLE_SIZE, bold=True),
-    "sub":      pygame.font.SysFont("arial", 22, bold=True),
-    "resource": pygame.font.SysFont("arial", FONT_RESOURCE_SIZE),
-    "log":      pygame.font.SysFont("arial", FONT_LOG_SIZE),
-    "button":   pygame.font.SysFont("arial", 22),
+    "huge":           pygame.font.SysFont("arial", 56, bold=True),
+    "title":          pygame.font.SysFont("arial", FONT_TITLE_SIZE, bold=True),
+    "sub":            pygame.font.SysFont("arial", 22, bold=True),
+    "resource":       pygame.font.SysFont("arial", FONT_RESOURCE_SIZE),
+    "resource_small": pygame.font.SysFont("arial", 18),
+    "log":            pygame.font.SysFont("arial", FONT_LOG_SIZE),
+    "button":         pygame.font.SysFont("arial", 22),
+    "event_title":    pygame.font.SysFont("arial", 44, bold=True),
+    "event_effect":   pygame.font.SysFont("arial", 28, bold=True),
 }
 
 # === СОСТОЯНИЯ ЭКРАНА ===
@@ -72,11 +81,6 @@ current_event_log = ""
 # Выбранное действие (для STATE_TARGET)
 current_action = None
 
-# Цвета для лога (парсим по префиксу)
-LOG_COLOR_NEG = COLORS["negative"]
-LOG_COLOR_POS = COLORS["positive"]
-LOG_COLOR_DEF = COLORS["text"]
-
 
 # === ХЕЛПЕРЫ ===
 def draw_text_centered(surface, text, rect, font, color):
@@ -101,17 +105,6 @@ def get_player_color(player):
     return COLORS.get(player.color_key, COLORS["text"])
 
 
-def log_color(message):
-    """Определяет цвет строки лога по её содержимому."""
-    if "−" in message or "-" in message:
-        # Есть минус — возможно негативное
-        if "+" not in message:
-            return LOG_COLOR_NEG
-    if "+" in message:
-        return LOG_COLOR_POS
-    return LOG_COLOR_DEF
-
-
 def make_action_buttons():
     buttons = []
     total = len(ACTIONS) * BUTTON_WIDTH + (len(ACTIONS) - 1) * BUTTON_SPACING
@@ -126,6 +119,8 @@ def make_action_buttons():
 def make_target_buttons():
     buttons = []
     others = [p for p in state.players if p is not state.current_player and not p.is_dead]
+    if not others:
+        return buttons
     total = len(others) * TARGET_BUTTON_WIDTH + (len(others) - 1) * BUTTON_SPACING
     sx = (WINDOW_WIDTH - total) // 2
     for i, target in enumerate(others):
@@ -137,12 +132,14 @@ def make_target_buttons():
 
 action_buttons = make_action_buttons()
 
-continue_rect = pygame.Rect(0, 0, 200, 50)
-continue_rect.center = (WINDOW_WIDTH // 2 + 150, 400)
+# Кнопка «Продолжить» в модалке события
+continue_rect = pygame.Rect(0, 0, 300, 60)
+continue_rect.center = (WINDOW_WIDTH // 2, 580)
 
-start_btn_rect  = pygame.Rect(WINDOW_WIDTH // 2 - 180, 360, 360, 60)
-rules_btn_rect  = pygame.Rect(WINDOW_WIDTH // 2 - 180, 440, 360, 60)
-back_btn_rect   = pygame.Rect(WINDOW_WIDTH // 2 - 100, WINDOW_HEIGHT - 70, 200, 46)
+# Кнопки экранов
+start_btn_rect = pygame.Rect(WINDOW_WIDTH // 2 - 180, 360, 360, 60)
+rules_btn_rect = pygame.Rect(WINDOW_WIDTH // 2 - 180, 440, 360, 60)
+back_btn_rect  = pygame.Rect(WINDOW_WIDTH // 2 - 100, WINDOW_HEIGHT - 70, 200, 46)
 lore_continue_rect = pygame.Rect(WINDOW_WIDTH // 2 - 150, WINDOW_HEIGHT - 80, 300, 50)
 over_btn_rect = pygame.Rect(WINDOW_WIDTH // 2 - 150, WINDOW_HEIGHT - 120, 300, 50)
 
@@ -316,12 +313,12 @@ def draw_game(mouse_pos, clicked, click_pos):
     player = state.current_player
     player_color = get_player_color(player)
 
+    # Заголовок + 4 карточки фракций + лог
     draw_header(screen, player.name, player_color, state.turn, fonts)
-    draw_resources_panel(screen, player, icons, fonts)
+    draw_players_panel(screen, state.players, state.current, icons_small, fonts)
     draw_log_panel(screen, state.log, fonts)
 
     if game_state == STATE_EVENT:
-        # Модалка события
         event_dict = {
             "title": current_event.title if current_event else "СОБЫТИЕ",
             "effect": current_event_log,
@@ -407,7 +404,6 @@ def start_new_turn():
 
 # === ЭКРАН ПОБЕДЫ/ПОРАЖЕНИЯ ===
 def draw_game_over(mouse_pos):
-    global current_screen
     screen.blit(background, (0, 0))
     overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 220))
@@ -481,7 +477,6 @@ def main():
         elif current_screen == SCREEN_OVER:
             draw_game_over(mouse_pos)
             if clicked and over_btn_rect.collidepoint(click_pos):
-                # Перезапуск
                 state.__init__()
                 game_state = STATE_EVENT
                 current_screen = SCREEN_START
