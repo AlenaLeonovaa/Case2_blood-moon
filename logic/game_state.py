@@ -28,6 +28,7 @@ class GameState:
         self.turn = 1
         self.winner: Optional[Player] = None
         self.log: list[str] = []
+        self._dead_logged: set = set()
 
     @property
     def current_player(self) -> Player:
