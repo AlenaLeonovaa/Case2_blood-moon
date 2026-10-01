@@ -1,4 +1,4 @@
-"""Модальное окно случайного события — большая карточка."""
+"""Модальное окно случайного события."""
 import pygame
 
 from config import COLORS
@@ -19,45 +19,79 @@ def translate(text):
     return text
 
 
+def wrap_text(text, font, max_width):
+    """Разбивает текст на строки по ширине."""
+    words = text.split()
+    lines = []
+    current = ""
+    for word in words:
+        test = (current + " " + word).strip()
+        if font.size(test)[0] <= max_width:
+            current = test
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines
+
+
 def draw_event_modal(screen, event, mouse_pos, continue_rect, fonts):
-    """Рисует большую карточку события по центру."""
+    """Рисует карточку события.
+
+    event: dict с полями title, effect, phrase, story.
+    """
     W, H = screen.get_size()
 
-    # Затемнение фона
     overlay = pygame.Surface((W, H), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 200))
     screen.blit(overlay, (0, 0))
 
-    # Карточка
-    card_w, card_h = 900, 500
+    card_w, card_h = 900, 520
     card = pygame.Rect(W // 2 - card_w // 2, H // 2 - card_h // 2 - 30, card_w, card_h)
 
-    # Фон карточки
     surf = pygame.Surface((card.width, card.height), pygame.SRCALPHA)
     surf.fill((28, 28, 38, 250))
     screen.blit(surf, (card.x, card.y))
 
-    # Рамка (красная)
     pygame.draw.rect(screen, COLORS["player1"], card, 3, border_radius=16)
     pygame.draw.rect(screen, (220, 80, 80), card.inflate(-8, -8), 1, border_radius=14)
 
-    # Заголовок
-    title = fonts["event_title"].render(event["title"], True, COLORS["text"])
-    screen.blit(title, (card.centerx - title.get_width() // 2, card.y + 50))
+    # Фраза сверху
+    phrase = event.get("phrase", "")
+    if phrase:
+        phrase_surf = fonts["phrase"].render(phrase, True, (200, 200, 210))
+        screen.blit(phrase_surf,
+                    (card.centerx - phrase_surf.get_width() // 2, card.y + 25))
 
-    # Линия под заголовком
+    # Название события
+    title = fonts["event_title"].render(event["title"], True, COLORS["text"])
+    screen.blit(title, (card.centerx - title.get_width() // 2, card.y + 60))
+
+    # Линия
     pygame.draw.line(screen, COLORS["player1"],
                      (card.centerx - 250, card.y + 130),
                      (card.centerx + 250, card.y + 130), 2)
 
-    # Разбор эффекта
+    # История
+    story = event.get("story", "")
+    y = card.y + 150
+    if story:
+        lines = wrap_text(story, fonts["story"], card.width - 80)
+        for line in lines:
+            line_surf = fonts["story"].render(line, True, (220, 220, 230))
+            screen.blit(line_surf,
+                        (card.centerx - line_surf.get_width() // 2, y))
+            y += 26
+        y += 20
+
+    # Эффекты
     effect_str = event["effect"]
     parts = effect_str.split(": ", 1)
     effects_text = parts[1] if len(parts) == 2 else effect_str
     pieces = [p.strip() for p in effects_text.split(",")]
 
-    # Эффекты крупно, по центру
-    y = card.y + 180
     for piece in pieces:
         ru_piece = translate(piece)
         if "−" in piece or "-" in piece:
@@ -72,7 +106,7 @@ def draw_event_modal(screen, event, mouse_pos, continue_rect, fonts):
 
         surf_text = fonts["event_effect"].render(f"{prefix}  {ru_piece}", True, color)
         screen.blit(surf_text, (card.centerx - surf_text.get_width() // 2, y))
-        y += 60
+        y += 45
 
     # Кнопка
     hover = continue_rect.collidepoint(mouse_pos)
