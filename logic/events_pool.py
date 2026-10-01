@@ -89,45 +89,48 @@ EVENTS = [
         title="Пожар",
         effects={"food": -3, "land": -1},
         is_positive=False,
+        is_random=False,
     ),
     RandomEvent(
         id="E2",
         title="Затмение",
         effects={"money": 5},
         is_positive=True,
+        is_random=True,
     ),
     RandomEvent(
         id="E3",
         title="Эпидемия",
         effects={"people": -3, "smuta": 2},
         is_positive=False,
+        is_random=False,
     ),
     RandomEvent(
         id="E4",
         title="Полная луна",
         effects={"food": 5},
         is_positive=True,
+        is_random=False,
     ),
     RandomEvent(
         id="E5",
         title="Инквизиция",
         effects={"food": -2, "smuta": 3},
         is_positive=False,
+        is_random=False,
     ),
     RandomEvent(
         id="E6",
         title="Травник",
         effects={"money": 3, "land": 1},
         is_positive=True,
+        is_random=False,
     ),
 ]
 
 
 def roll_event():
     """Выбирает случайное событие и определяет позитив/негатив.
-
-    Returns:
-        tuple: (event, is_positive_outcome).
     """
     event = random.choice(EVENTS)
     is_positive_outcome = random.random() < 0.5
@@ -135,19 +138,20 @@ def roll_event():
 
 
 def apply_event(player, event, is_positive_outcome):
-    """Применяет событие к игроку с учётом инверсии."""
-    should_invert = event.is_positive != is_positive_outcome
+    """Применяет событие к игроку.
+    """
+    if event.is_random:
+        should_invert = event.is_positive != is_positive_outcome
+    else:
+        should_invert = False
 
     log_parts = []
     for resource, value in event.effects.items():
         actual_value = -value if should_invert else value
 
-        if resource == "smuta":
-            player.smuta = max(0, player.smuta + actual_value)
-        else:
-            current = getattr(player, resource)
-            new_value = max(0, current + actual_value)
-            setattr(player, resource, new_value)
+        current = getattr(player, resource)
+        new_value = max(0, current + actual_value)
+        setattr(player, resource, new_value)
 
         sign = "+" if actual_value > 0 else ""
         log_parts.append(f"{sign}{actual_value} {resource}")
