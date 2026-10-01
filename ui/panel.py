@@ -45,8 +45,24 @@ def draw_resources_panel(screen, player, icons, fonts):
         screen.blit(label_surf, (rx, y_top + 52))
         rx += 190
 
+RU_NAMES = {
+    "food":   "еда",
+    "money":  "деньги",
+    "land":   "земля",
+    "people": "народ",
+    "smuta":  "смута",
+}
+
+
+def translate(text):
+    """Переводит английские ключи ресурсов в русские."""
+    for en, ru in RU_NAMES.items():
+        text = text.replace(en, ru)
+    return text
+
+
 def draw_log_panel(screen, messages, fonts):
-    """Рисует панель лога событий. messages — список строк."""
+    """Рисует лог. messages — список строк."""
     log_rect = pygame.Rect(20, 170, 400, 400)
     pygame.draw.rect(screen, COLORS["panel"], log_rect, border_radius=12)
 
@@ -55,14 +71,18 @@ def draw_log_panel(screen, messages, fonts):
 
     ly = 240
     for msg in messages:
-        # Автоопределение цвета по содержимому
-        if "+" in msg and "−" not in msg and "-" not in msg:
+        ru_msg = translate(msg)
+
+        has_plus = "+" in msg
+        has_minus = "−" in msg or "-" in msg
+
+        if has_plus and not has_minus:
             color = COLORS["positive"]
-        elif "−" in msg or "-" in msg:
+        elif has_minus:
             color = COLORS["negative"]
         else:
             color = COLORS["text"]
 
-        line = fonts["log"].render(f"> {msg}", True, color)
+        line = fonts["log"].render(f"> {ru_msg}", True, color)
         screen.blit(line, (40, ly))
         ly += 30
