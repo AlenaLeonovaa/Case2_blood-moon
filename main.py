@@ -423,12 +423,17 @@ def start_new_turn():
 
     event, is_positive, log_message = state.start_turn()
 
-    current_event = event
-    current_event_log = log_message
-    current_event_phrase = get_phrase(is_positive)
-    current_event_story = get_story(event.id, state.current_player.name)
-
-    game_state = STATE_EVENT
+    if event is not None:
+        current_event = event
+        current_event_log = log_message
+        current_event_phrase = get_phrase(is_positive)
+        current_event_story = get_story(
+            event.id,
+            state.current_player.name,
+        )
+        game_state = STATE_EVENT
+    else:
+        game_state = STATE_ACTION
 
 
 # === ЭКРАН ПОБЕДЫ/ПОРАЖЕНИЯ ===
