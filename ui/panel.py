@@ -6,6 +6,20 @@ from config import (
     LOG_MAX_MESSAGES, ICON_SIZE,
 )
 
+RU_NAMES = {
+    "food":   "еда",
+    "money":  "деньги",
+    "land":   "земля",
+    "people": "народ",
+    "smuta":  "смута",
+}
+
+
+def translate(text):
+    """Переводит английские ключи ресурсов в русские."""
+    for en, ru in RU_NAMES.items():
+        text = text.replace(en, ru)
+    return text
 
 def draw_header(screen, player_name, player_color, turn_number, fonts):
     """Рисует верхнюю панель с именем игрока и номером хода."""
@@ -44,22 +58,6 @@ def draw_resources_panel(screen, player, icons, fonts):
         label_surf = fonts["log"].render(label, True, (150, 150, 160))
         screen.blit(label_surf, (rx, y_top + 52))
         rx += 190
-
-RU_NAMES = {
-    "food":   "еда",
-    "money":  "деньги",
-    "land":   "земля",
-    "people": "народ",
-    "smuta":  "смута",
-}
-
-
-def translate(text):
-    """Переводит английские ключи ресурсов в русские."""
-    for en, ru in RU_NAMES.items():
-        text = text.replace(en, ru)
-    return text
-
 
 def draw_log_panel(screen, messages, fonts):
     """Рисует лог. messages — список строк."""
