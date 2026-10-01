@@ -7,7 +7,7 @@ from logic.events_pool import action_alliance, action_trade, action_raid, action
 
 def test_player_initialization():
     """Проверка стартовых ресурсов игрока"""
-    p = Player("Тест", (0, 0, 0))
+    p = Player("Тест", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
     assert p.food == 10
     assert p.money == 10
     assert p.land == 5
@@ -17,7 +17,7 @@ def test_player_initialization():
 
 def test_prestige_formula():
     """Проверка формулы престижа: land*2 + money//5 + people//5 - smuta"""
-    p = Player("Тест", (0, 0, 0))
+    p = Player("Тест", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
     p.land = 5
     p.money = 10
     p.people = 10
@@ -28,21 +28,21 @@ def test_prestige_formula():
 
 def test_death_by_smuta():
     """Проверка смерти при смуте >= 10"""
-    p = Player("Тест", (0, 0, 0))
+    p = Player("Тест", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
     p.smuta = 10
     assert p.is_dead == True
 
 
 def test_death_by_people():
     """Проверка смерти при народе <= 0"""
-    p = Player("Тест", (0, 0, 0))
+    p = Player("Тест", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
     p.people = 0
     assert p.is_dead == True
 
 
 def test_can_afford():
     """Проверка, хватает ли ресурсов на действие"""
-    p = Player("Тест", (0, 0, 0))
+    p = Player("Тест", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
     p.money = 5
     # Действие стоит 3 деньги
     assert p.can_afford({"money": 3}) == True
@@ -54,8 +54,8 @@ def test_can_afford():
 
 def test_action_alliance():
     """A1: Союз уменьшает смуту у обоих на 1 (но не ниже 0)"""
-    p1 = Player("Игрок1", (0, 0, 0))
-    p2 = Player("Игрок2", (0, 0, 0))
+    p1 = Player("Игрок1", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
+    p2 = Player("Игрок2", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
     p1.smuta = 5
     p2.smuta = 0
 
@@ -67,7 +67,7 @@ def test_action_alliance():
 
 def test_action_trade():
     """A2: Торговля: -3 деньги, +3 пропитание"""
-    p1 = Player("Игрок1", (0, 0, 0))
+    p1 = Player("Игрок1", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
     p1.money = 10
     p1.food = 5
 
@@ -79,8 +79,8 @@ def test_action_trade():
 
 def test_action_raid():
     """A3: Набег: -1 народ у себя, -2 еды у цели, +1 смута себе"""
-    p1 = Player("Игрок1", (0, 0, 0))
-    p2 = Player("Игрок2", (0, 0, 0))
+    p1 = Player("Игрок1", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
+    p2 = Player("Игрок2", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
     p1.people = 10
     p1.smuta = 0
     p2.food = 10
@@ -94,8 +94,8 @@ def test_action_raid():
 
 def test_action_bribe():
     """A4: Подкуп: -3 деньги у себя, -2 смуты у цели"""
-    p1 = Player("Игрок1", (0, 0, 0))
-    p2 = Player("Игрок2", (0, 0, 0))
+    p1 = Player("Игрок1", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
+    p2 = Player("Игрок2", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
     p1.money = 10
     p2.smuta = 5
 
@@ -107,8 +107,8 @@ def test_action_bribe():
 
 def test_action_discord():
     """A5: Раздор: -2 деньги у себя, +2 смуты у цели"""
-    p1 = Player("Игрок1", (0, 0, 0))
-    p2 = Player("Игрок2", (0, 0, 0))
+    p1 = Player("Игрок1", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
+    p2 = Player("Игрок2", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
     p1.money = 10
     p2.smuta = 2
 
