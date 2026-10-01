@@ -38,7 +38,6 @@ icons = {
     "prestige": load_icon("prestige"),
 }
 
-# Маленькие иконки 24×24 для карточек фракций
 icons_small = {
     key: pygame.transform.smoothscale(img, (24, 24))
     for key, img in icons.items()
@@ -72,11 +71,15 @@ state = GameState()
 STATE_EVENT  = "event"
 STATE_ACTION = "action"
 STATE_TARGET = "target"
+STATE_RESULT = "result"
 game_state = STATE_EVENT
 
 # Текущее событие (для модалки)
 current_event = None
 current_event_log = ""
+
+# Результат действия (для модалки)
+action_result_log = ""
 
 # Выбранное действие (для STATE_TARGET)
 current_action = None
@@ -101,7 +104,6 @@ def draw_panel(rect, alpha=200, border_color=None):
 
 
 def get_player_color(player):
-    """Возвращает RGB-цвет игрока по его color_key."""
     return COLORS.get(player.color_key, COLORS["text"])
 
 
@@ -132,11 +134,9 @@ def make_target_buttons():
 
 action_buttons = make_action_buttons()
 
-# Кнопка «Продолжить» в модалке события
 continue_rect = pygame.Rect(0, 0, 300, 60)
 continue_rect.center = (WINDOW_WIDTH // 2, 580)
 
-# Кнопки экранов
 start_btn_rect = pygame.Rect(WINDOW_WIDTH // 2 - 180, 360, 360, 60)
 rules_btn_rect = pygame.Rect(WINDOW_WIDTH // 2 - 180, 440, 360, 60)
 back_btn_rect  = pygame.Rect(WINDOW_WIDTH // 2 - 100, WINDOW_HEIGHT - 70, 200, 46)
@@ -306,18 +306,18 @@ def draw_rules(mouse_pos):
 
 # === ИГРОВОЙ ЭКРАН ===
 def draw_game(mouse_pos, clicked, click_pos):
-    global game_state, current_event, current_event_log, current_action
+    global game_state, current_event, current_event_log, current_action, action_result_log
 
     screen.blit(background, (0, 0))
 
     player = state.current_player
     player_color = get_player_color(player)
 
-    # Заголовок + 4 карточки фракций + лог
     draw_header(screen, player.name, player_color, state.turn, fonts)
     draw_players_panel(screen, state.players, state.current, icons_small, fonts)
     draw_log_panel(screen, state.log, fonts)
 
+    # СОБЫТИЕ
     if game_state == STATE_EVENT:
         event_dict = {
             "title": current_event.title if current_event else "СОБЫТИЕ",
@@ -327,6 +327,7 @@ def draw_game(mouse_pos, clicked, click_pos):
         if clicked and continue_rect.collidepoint(click_pos):
             game_state = STATE_ACTION
 
+    # ВЫБОР ДЕЙСТВИЯ
     elif game_state == STATE_ACTION:
         for btn in action_buttons:
             hover = btn["rect"].collidepoint(mouse_pos)
@@ -352,16 +353,17 @@ def draw_game(mouse_pos, clicked, click_pos):
                         current_action = action
                         game_state = STATE_TARGET
                     else:
-                        state.apply_action(action, target=None)
+                        log = state.apply_action(action, target=None)
                         state.check_deaths()
                         state.check_winner()
                         if state.is_game_over:
                             current_screen_global()
                         else:
-                            state.next_turn()
-                            start_new_turn()
+                            action_result_log = log
+                            game_state = STATE_RESULT
                     break
 
+    # ВЫБОР ЦЕЛИ
     elif game_state == STATE_TARGET:
         hint = fonts["resource"].render(
             f"Выберите цель для «{current_action.title}»", True, COLORS["text"],
@@ -382,15 +384,26 @@ def draw_game(mouse_pos, clicked, click_pos):
         if clicked:
             for btn in target_buttons:
                 if btn["rect"].collidepoint(click_pos):
-                    state.apply_action(current_action, btn["target"])
+                    log = state.apply_action(current_action, btn["target"])
                     state.check_deaths()
                     state.check_winner()
                     if state.is_game_over:
                         current_screen_global()
                     else:
-                        state.next_turn()
-                        start_new_turn()
+                        action_result_log = log
+                        game_state = STATE_RESULT
                     break
+
+    # РЕЗУЛЬТАТ ДЕЙСТВИЯ
+    elif game_state == STATE_RESULT:
+        result_dict = {
+            "title": "РЕЗУЛЬТАТ",
+            "effect": action_result_log,
+        }
+        draw_event_modal(screen, result_dict, mouse_pos, continue_rect, fonts)
+        if clicked and continue_rect.collidepoint(click_pos):
+            state.next_turn()
+            start_new_turn()
 
 
 def start_new_turn():
