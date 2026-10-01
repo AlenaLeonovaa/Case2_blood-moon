@@ -12,6 +12,7 @@ from logic.game_state import GameState
 from logic.events_pool import ACTIONS
 from ui.panel import draw_header, draw_players_panel, draw_log_panel
 from ui.event_modal import draw_event_modal
+from ui.event_texts import get_phrase, get_story
 
 
 # === ИНИЦИАЛИЗАЦИЯ ===
@@ -54,6 +55,8 @@ fonts = {
     "button":         pygame.font.SysFont("arial", 22),
     "event_title":    pygame.font.SysFont("arial", 44, bold=True),
     "event_effect":   pygame.font.SysFont("arial", 28, bold=True),
+    "phrase":         pygame.font.SysFont("arial", 20, italic=True),
+    "story":          pygame.font.SysFont("arial", 20),
 }
 
 # === СОСТОЯНИЯ ЭКРАНА ===
@@ -74,9 +77,11 @@ STATE_TARGET = "target"
 STATE_RESULT = "result"
 game_state = STATE_EVENT
 
-# Текущее событие (для модалки)
+# Данные текущего события (для модалки)
 current_event = None
 current_event_log = ""
+current_event_phrase = ""
+current_event_story = ""
 
 # Результат действия (для модалки)
 action_result_log = ""
@@ -307,6 +312,7 @@ def draw_rules(mouse_pos):
 # === ИГРОВОЙ ЭКРАН ===
 def draw_game(mouse_pos, clicked, click_pos):
     global game_state, current_event, current_event_log, current_action, action_result_log
+    global current_event_phrase, current_event_story
 
     screen.blit(background, (0, 0))
 
@@ -320,8 +326,10 @@ def draw_game(mouse_pos, clicked, click_pos):
     # СОБЫТИЕ
     if game_state == STATE_EVENT:
         event_dict = {
-            "title": current_event.title if current_event else "СОБЫТИЕ",
+            "title":  current_event.title if current_event else "СОБЫТИЕ",
             "effect": current_event_log,
+            "phrase": current_event_phrase,
+            "story":  current_event_story,
         }
         draw_event_modal(screen, event_dict, mouse_pos, continue_rect, fonts)
         if clicked and continue_rect.collidepoint(click_pos):
@@ -397,8 +405,10 @@ def draw_game(mouse_pos, clicked, click_pos):
     # РЕЗУЛЬТАТ ДЕЙСТВИЯ
     elif game_state == STATE_RESULT:
         result_dict = {
-            "title": "РЕЗУЛЬТАТ",
+            "title":  "РЕЗУЛЬТАТ",
             "effect": action_result_log,
+            "phrase": "",
+            "story":  "",
         }
         draw_event_modal(screen, result_dict, mouse_pos, continue_rect, fonts)
         if clicked and continue_rect.collidepoint(click_pos):
@@ -409,9 +419,15 @@ def draw_game(mouse_pos, clicked, click_pos):
 def start_new_turn():
     """Начинает новый ход: доход + событие."""
     global current_event, current_event_log, game_state
+    global current_event_phrase, current_event_story
+
     event, is_positive, log_message = state.start_turn()
+
     current_event = event
     current_event_log = log_message
+    current_event_phrase = get_phrase(is_positive)
+    current_event_story = get_story(event.id, state.current_player.name)
+
     game_state = STATE_EVENT
 
 
@@ -443,7 +459,6 @@ def draw_game_over(mouse_pos):
 
 
 def current_screen_global():
-    """Переключает на экран победы."""
     global current_screen
     current_screen = SCREEN_OVER
 
