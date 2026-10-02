@@ -50,6 +50,10 @@ icons_small = {
     for key, img in icons.items()
 }
 
+# Корона для экрана победы
+crown_img = pygame.image.load("assets/icon_crown.png").convert_alpha()
+crown_img = pygame.transform.smoothscale(crown_img, (96, 96))
+
 # === ШРИФТЫ ===
 fonts = {
     "huge":           pygame.font.SysFont("arial", 56, bold=True),
@@ -613,9 +617,8 @@ def draw_game_over(mouse_pos):
         pygame.draw.rect(screen, winner_color, card, 3, border_radius=18)
         pygame.draw.rect(screen, (255, 215, 0), card.inflate(-10, -10), 1, border_radius=16)
 
-        # Корона
-        crown = fonts["huge"].render("👑", True, (255, 215, 0))
-        screen.blit(crown, (card.centerx - crown.get_width() // 2, card.y + 20))
+        # Корона — картинкой
+        screen.blit(crown_img, (card.centerx - crown_img.get_width() // 2, card.y + 15))
 
         # Имя победителя — крупно, в цвете фракции
         name = fonts["win_name"].render(state.winner.name, True, winner_color)
