@@ -11,7 +11,7 @@ from config import (
 from logic.game_state import GameState
 from logic.events_pool import ACTIONS
 from ui.panel import draw_header, draw_players_panel, get_player_card_rects
-from ui.event_modal import draw_event_modal
+from ui.event_modal import draw_event_modal, draw_result_modal
 from ui.event_texts import get_phrase, get_story
 from ui.floating import FloatingText, snapshot, diff
 
