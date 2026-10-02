@@ -109,7 +109,7 @@ def draw_player_card(screen, player, rect, is_active, icons_small, fonts):
 def draw_players_panel(screen, players, current_index, icons_small, fonts):
     """Рисует 4 карточки фракций в ряд."""
     y_top = 66
-    card_height = 220
+    card_height = 240
     padding = 16
     card_width = (WINDOW_WIDTH - padding * 5) // 4
 
@@ -150,7 +150,7 @@ def draw_log_panel(screen, messages, fonts):
 def get_player_card_rects():
     """Возвращает список pygame.Rect — координаты 4 карточек фракций."""
     y_top = 66
-    card_height = 220
+    card_height = 240
     padding = 16
     card_width = (WINDOW_WIDTH - padding * 5) // 4
     rects = []
