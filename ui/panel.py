@@ -40,28 +40,21 @@ def draw_header(screen, player_name, player_color, turn_number, fonts):
 
 # === КАРТОЧКА ФРАКЦИИ ===
 def draw_player_card(screen, player, rect, is_active, icons_small, fonts):
-    """Рисует карточку одной фракции.
-
-    Args:
-        player: объект Player.
-        rect: pygame.Rect — область карточки.
-        is_active: bool — чей сейчас ход.
-        icons_small: dict — уменьшенные иконки 24×24.
-    """
+    """Рисует карточку фракции."""
     color = COLORS.get(player.color_key, COLORS["text"])
 
-    # Фон: активная — светлее
+    # Фон
     bg_alpha = 240 if is_active else 180
     surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
     surf.fill((40, 40, 52, bg_alpha) if is_active else (28, 28, 36, bg_alpha))
     screen.blit(surf, (rect.x, rect.y))
 
-    # Рамка: активная — 3px её цвета, пассивная — 1px серым
+    # Рамка
     border = color if is_active else (60, 60, 80)
     border_width = 3 if is_active else 1
     pygame.draw.rect(screen, border, rect, border_width, border_radius=10)
 
-    # Затемнение для мёртвых
+    # Мёртвый
     if player.is_dead:
         dead_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
         dead_surf.fill((0, 0, 0, 160))
@@ -75,33 +68,41 @@ def draw_player_card(screen, player, rect, is_active, icons_small, fonts):
 
     # Заголовок
     title = fonts["sub"].render(player.name, True, color)
-    screen.blit(title, (rect.x + 12, rect.y + 8))
+    screen.blit(title, (rect.x + 14, rect.y + 8))
 
-    # Ресурсы в 2 колонки по 3 строки
+    # Ресурсы: 2 колонки, иконки 40×40
+    ICON_BIG = 40
+    big_icons = {
+        "food":     pygame.transform.smoothscale(icons_small["food"], (ICON_BIG, ICON_BIG)),
+        "money":    pygame.transform.smoothscale(icons_small["money"], (ICON_BIG, ICON_BIG)),
+        "land":     pygame.transform.smoothscale(icons_small["land"], (ICON_BIG, ICON_BIG)),
+        "people":   pygame.transform.smoothscale(icons_small["people"], (ICON_BIG, ICON_BIG)),
+        "smuta":    pygame.transform.smoothscale(icons_small["smuta"], (ICON_BIG, ICON_BIG)),
+        "prestige": pygame.transform.smoothscale(icons_small["prestige"], (ICON_BIG, ICON_BIG)),
+    }
+
     rows = [
         [("food", player.food),       ("money", player.money)],
         [("land", player.land),       ("people", player.people)],
         [("smuta", player.smuta),     ("prestige", player.prestige)],
     ]
 
-    col_w = (rect.width - 24) // 2
+    col_w = (rect.width - 28) // 2
     for ri, row in enumerate(rows):
         for ci, (key, value) in enumerate(row):
-            x = rect.x + 12 + ci * col_w
-            y = rect.y + 40 + ri * 36
+            x = rect.x + 14 + ci * col_w
+            y = rect.y + 45 + ri * 56
 
-            # Иконка
-            screen.blit(icons_small[key], (x, y))
+            screen.blit(big_icons[key], (x, y))
 
-            # Число
             color_val = COLORS["text"]
             if key == "smuta" and value >= 7:
                 color_val = COLORS["negative"]
             elif key == "smuta" and value == 0:
                 color_val = COLORS["positive"]
 
-            val_surf = fonts["resource_small"].render(str(value), True, color_val)
-            screen.blit(val_surf, (x + 28, y + 4))
+            val_surf = fonts["resource"].render(str(value), True, color_val)
+            screen.blit(val_surf, (x + ICON_BIG + 8, y + 8))
 
 
 # === ПАНЕЛЬ 4 ФРАКЦИЙ ===
