@@ -389,14 +389,13 @@ def draw_game(mouse_pos, clicked, click_pos):
     elif game_state == STATE_ACTION:
         for btn in action_buttons:
             hover = btn["rect"].collidepoint(mouse_pos)
-            afford = player.can_afford(btn["action"].cost)
+            action = btn["action"]
+            afford = player.can_afford(action.cost)
 
-            # Плавная анимация
             target_anim = 1.0 if hover and afford else 0.0
             btn["hover_anim"] += (target_anim - btn["hover_anim"]) * 0.25
             anim = btn["hover_anim"]
 
-            # Размер увеличивается при hover
             grow = int(8 * anim)
             rect = btn["rect"].inflate(grow * 2, grow * 2)
 
@@ -411,7 +410,7 @@ def draw_game(mouse_pos, clicked, click_pos):
 
             pygame.draw.rect(screen, color, rect, border_radius=10)
             pygame.draw.rect(screen, border_col, rect, 2, border_radius=10)
-            draw_text_centered(screen, btn["action"]["title"], rect,
+            draw_text_centered(screen, action.title, rect,
                                fonts["button"], COLORS["text"])
 
         hint = fonts["resource"].render("Выберите действие", True, COLORS["text"])
@@ -419,8 +418,8 @@ def draw_game(mouse_pos, clicked, click_pos):
 
         if clicked:
             for btn in action_buttons:
-                if btn["rect"].collidepoint(click_pos) and player.can_afford(btn["action"].cost):
-                    action = btn["action"]
+                action = btn["action"]
+                if btn["rect"].collidepoint(click_pos) and player.can_afford(action.cost):
                     if action.target_required:
                         current_action = action
                         game_state = STATE_TARGET
