@@ -469,13 +469,7 @@ def draw_game(mouse_pos, clicked, click_pos):
 
     # РЕЗУЛЬТАТ ДЕЙСТВИЯ
     elif game_state == STATE_RESULT:
-        result_dict = {
-            "title":  "РЕЗУЛЬТАТ",
-            "effect": action_result_log,
-            "phrase": "",
-            "story":  "",
-        }
-        draw_event_modal(screen, result_dict, mouse_pos, continue_rect, fonts)
+        draw_result_modal(screen, action_result_log, mouse_pos, continue_rect, fonts)
         if clicked and continue_rect.collidepoint(click_pos):
             state.next_turn()
             start_new_turn()
