@@ -108,7 +108,7 @@ def draw_player_card(screen, player, rect, is_active, icons_small, fonts):
 def draw_players_panel(screen, players, current_index, icons_small, fonts):
     """Рисует 4 карточки фракций в ряд."""
     y_top = 66
-    card_height = 160
+    card_height = 220
     padding = 16
     card_width = (WINDOW_WIDTH - padding * 5) // 4
 
