@@ -126,7 +126,7 @@ def make_action_buttons():
     sx = (WINDOW_WIDTH - total) // 2
     for i, action in enumerate(ACTIONS):
         x = sx + i * (BUTTON_WIDTH + BUTTON_SPACING)
-        rect = pygame.Rect(x, 600, BUTTON_WIDTH, 70)  # выше
+        rect = pygame.Rect(x, 600, BUTTON_WIDTH, 70)
         buttons.append({"rect": rect, "action": action, "hover_anim": 0.0})
     return buttons
 
@@ -373,7 +373,7 @@ def draw_game(mouse_pos, clicked, click_pos):
     for ft in floating_texts:
         ft.draw(screen)
 
-    # СОБЫТИЕ (только если выпало)
+    # СОБЫТИЕ
     if game_state == STATE_EVENT:
         event_dict = {
             "title":  current_event.title if current_event else "СОБЫТИЕ",
@@ -387,7 +387,7 @@ def draw_game(mouse_pos, clicked, click_pos):
 
     # ВЫБОР ДЕЙСТВИЯ
     elif game_state == STATE_ACTION:
-            for btn in action_buttons:
+        for btn in action_buttons:
             hover = btn["rect"].collidepoint(mouse_pos)
             afford = player.can_afford(btn["action"].cost)
 
@@ -407,12 +407,15 @@ def draw_game(mouse_pos, clicked, click_pos):
                 base = COLORS["button"]
                 hi = COLORS["button_hover"]
                 color = tuple(int(base[i] + (hi[i] - base[i]) * anim) for i in range(3))
-                border_col = COLORS["player1"] if afford else (60, 60, 80)
+                border_col = COLORS["player1"]
 
             pygame.draw.rect(screen, color, rect, border_radius=10)
             pygame.draw.rect(screen, border_col, rect, 2, border_radius=10)
             draw_text_centered(screen, btn["action"]["title"], rect,
                                fonts["button"], COLORS["text"])
+
+        hint = fonts["resource"].render("Выберите действие", True, COLORS["text"])
+        screen.blit(hint, (WINDOW_WIDTH // 2 - hint.get_width() // 2, 570))
 
         if clicked:
             for btn in action_buttons:
@@ -439,7 +442,7 @@ def draw_game(mouse_pos, clicked, click_pos):
         hint = fonts["resource"].render(
             f"Выберите цель для «{current_action.title}»", True, COLORS["text"],
         )
-        screen.blit(hint, (WINDOW_WIDTH // 2 - hint.get_width() // 2, 580))
+        screen.blit(hint, (WINDOW_WIDTH // 2 - hint.get_width() // 2, 570))
 
         target_buttons = make_target_buttons()
         for btn in target_buttons:
@@ -484,7 +487,6 @@ def start_new_turn():
     event, is_positive, log_message = state.start_turn()
     spawn_floats(before)
 
-    # Событие не выпало (75% случаев)
     if event is None:
         current_event = None
         current_event_log = ""
@@ -493,7 +495,6 @@ def start_new_turn():
         game_state = STATE_ACTION
         return
 
-    # Событие выпало (25%)
     current_event = event
     current_event_log = log_message
     current_event_phrase = get_phrase(is_positive)
