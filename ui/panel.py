@@ -145,3 +145,15 @@ def draw_log_panel(screen, messages, fonts):
         line = fonts["log"].render(f"> {ru_msg}", True, color)
         screen.blit(line, (40, ly))
         ly += 32
+
+def get_player_card_rects():
+    """Возвращает список pygame.Rect — координаты 4 карточек фракций."""
+    y_top = 66
+    card_height = 220
+    padding = 16
+    card_width = (WINDOW_WIDTH - padding * 5) // 4
+    rects = []
+    for i in range(4):
+        x = padding + i * (card_width + padding)
+        rects.append(pygame.Rect(x, y_top + padding, card_width, card_height))
+    return rects
