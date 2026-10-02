@@ -1,4 +1,6 @@
 """Точка входа игры «Кровавая Луна»."""
+import math
+import random
 import pygame
 
 from config import (
@@ -6,7 +8,7 @@ from config import (
     FONT_TITLE_SIZE, FONT_RESOURCE_SIZE, FONT_LOG_SIZE,
     BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_SPACING,
     TARGET_BUTTON_WIDTH, TARGET_BUTTON_HEIGHT,
-    LOG_MAX_MESSAGES, ICON_SIZE,
+    LOG_MAX_MESSAGES, ICON_SIZE, MAX_TURNS, WIN_PRESTIGE,
 )
 from logic.game_state import GameState
 from logic.events_pool import ACTIONS
@@ -62,6 +64,8 @@ fonts = {
     "phrase":         pygame.font.SysFont("arial", 20, italic=True),
     "story":          pygame.font.SysFont("arial", 20),
     "floating":       pygame.font.SysFont("arial", 26, bold=True),
+    "win_name":       pygame.font.SysFont("arial", 64, bold=True),
+    "win_sub":        pygame.font.SysFont("arial", 26, bold=True),
 }
 
 # === СОСТОЯНИЯ ЭКРАНА ===
@@ -80,22 +84,86 @@ STATE_EVENT  = "event"
 STATE_ACTION = "action"
 STATE_TARGET = "target"
 STATE_RESULT = "result"
-game_state = STATE_ACTION  # начальное — сразу выбор действия, если событие не выпадет
+game_state = STATE_ACTION
 
-# Данные текущего события (для модалки)
+# Данные текущего события
 current_event = None
 current_event_log = ""
 current_event_phrase = ""
 current_event_story = ""
 
-# Результат действия (для модалки)
+# Результат действия
 action_result_log = ""
 
-# Выбранное действие (для STATE_TARGET)
+# Выбранное действие
 current_action = None
 
 # Всплывающие цифры
 floating_texts = []
+
+
+# === СИСТЕМА ЧАСТИЦ ДЛЯ САЛЮТА ===
+FIREWORK_COLORS = [
+    (255, 215, 0),    # золото
+    (220, 60, 60),    # красный
+    (180, 100, 220),  # фиолетовый
+    (100, 220, 120),  # зелёный
+    (255, 140, 60),   # оранжевый
+]
+
+firework_particles = []
+firework_timer = [0.0]
+
+
+def spawn_firework(x, y):
+    """Создаёт залп из ~50 частиц в точке (x, y)."""
+    color = random.choice(FIREWORK_COLORS)
+    count = random.randint(40, 60)
+    for _ in range(count):
+        angle = random.uniform(0, 2 * math.pi)
+        speed = random.uniform(1.5, 4.5)
+        lifetime = random.uniform(0.8, 1.6)
+        firework_particles.append({
+            "x": x, "y": y,
+            "vx": math.cos(angle) * speed,
+            "vy": math.sin(angle) * speed,
+            "color": color,
+            "age": 0.0,
+            "lifetime": lifetime,
+            "size": random.randint(2, 4),
+        })
+
+
+def update_fireworks(dt):
+    """Обновляет частицы и создаёт новые залпы каждые 0.9 сек."""
+    firework_timer[0] += dt
+    if firework_timer[0] >= 0.9:
+        firework_timer[0] = 0.0
+        spawn_firework(random.randint(200, 1080), random.randint(80, 320))
+
+    for p in firework_particles[:]:
+        p["age"] += dt
+        p["x"] += p["vx"] * dt * 60
+        p["y"] += p["vy"] * dt * 60
+        p["vy"] += 0.15 * dt * 60
+        if p["age"] >= p["lifetime"]:
+            firework_particles.remove(p)
+
+
+def draw_fireworks(surface):
+    """Рисует все частицы."""
+    for p in firework_particles:
+        alpha = max(0, int(255 * (1 - p["age"] / p["lifetime"])))
+        size = max(1, int(p["size"] * (1 - p["age"] / p["lifetime"])))
+        surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
+        pygame.draw.circle(surf, (*p["color"], alpha), (size, size), size)
+        surface.blit(surf, (int(p["x"] - size), int(p["y"] - size)))
+
+
+def clear_fireworks():
+    """Сбрасывает салют."""
+    firework_particles.clear()
+    firework_timer[0] = 0.0
 
 
 # === ХЕЛПЕРЫ ===
@@ -190,7 +258,20 @@ start_btn_rect = pygame.Rect(WINDOW_WIDTH // 2 - 180, 360, 360, 60)
 rules_btn_rect = pygame.Rect(WINDOW_WIDTH // 2 - 180, 440, 360, 60)
 back_btn_rect  = pygame.Rect(WINDOW_WIDTH // 2 - 100, WINDOW_HEIGHT - 70, 200, 46)
 lore_continue_rect = pygame.Rect(WINDOW_WIDTH // 2 - 150, WINDOW_HEIGHT - 80, 300, 50)
-over_btn_rect = pygame.Rect(WINDOW_WIDTH // 2 - 150, WINDOW_HEIGHT - 120, 300, 50)
+over_btn_rect = pygame.Rect(WINDOW_WIDTH // 2 - 150, WINDOW_HEIGHT - 80, 300, 50)
+
+
+# === ОПРЕДЕЛЕНИЕ ПРИЧИНЫ ПОБЕДЫ ===
+def get_win_reason():
+    """Определяет, почему игра закончилась."""
+    if state.winner is None:
+        return ""
+    alive = [p for p in state.players if not p.is_dead]
+    if len(alive) == 1:
+        return "Последнее королевство под Луной"
+    if state.turn >= MAX_TURNS:
+        return f"Победа по итогам {MAX_TURNS} ходов"
+    return "Победа по престижу"
 
 
 # === СТАРТОВЫЙ ЭКРАН ===
@@ -503,34 +584,106 @@ def start_new_turn():
 
 # === ЭКРАН ПОБЕДЫ/ПОРАЖЕНИЯ ===
 def draw_game_over(mouse_pos):
+    """Экран победы с салютом и правильным текстом."""
     screen.blit(game_background, (0, 0))
+
     overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
-    overlay.fill((0, 0, 0, 220))
+    overlay.fill((0, 0, 0, 210))
     screen.blit(overlay, (0, 0))
 
+    # Салют рисуем поверх затемнения
+    draw_fireworks(screen)
+
+    # Карточка
+    card_w, card_h = 760, 460
+    card = pygame.Rect(
+        WINDOW_WIDTH // 2 - card_w // 2,
+        WINDOW_HEIGHT // 2 - card_h // 2 - 30,
+        card_w, card_h,
+    )
+
+    surf = pygame.Surface((card.width, card.height), pygame.SRCALPHA)
+    surf.fill((16, 16, 24, 235))
+    screen.blit(surf, (card.x, card.y))
+
     if state.winner:
-        title = fonts["huge"].render("ПОБЕДА!", True, COLORS["positive"])
-        screen.blit(title, (WINDOW_WIDTH // 2 - title.get_width() // 2, 200))
+        winner_color = get_player_color(state.winner)
 
-        name = fonts["title"].render(f"{state.winner.name}", True, get_player_color(state.winner))
-        screen.blit(name, (WINDOW_WIDTH // 2 - name.get_width() // 2, 300))
+        # Рамка в цвете победителя
+        pygame.draw.rect(screen, winner_color, card, 3, border_radius=18)
+        pygame.draw.rect(screen, (255, 215, 0), card.inflate(-10, -10), 1, border_radius=16)
 
-        prest = fonts["resource"].render(
-            f"Престиж: {state.winner.prestige}", True, COLORS["text"])
-        screen.blit(prest, (WINDOW_WIDTH // 2 - prest.get_width() // 2, 350))
+        # Корона
+        crown = fonts["huge"].render("👑", True, (255, 215, 0))
+        screen.blit(crown, (card.centerx - crown.get_width() // 2, card.y + 20))
+
+        # Имя победителя — крупно, в цвете фракции
+        name = fonts["win_name"].render(state.winner.name, True, winner_color)
+        screen.blit(name, (card.centerx - name.get_width() // 2, card.y + 95))
+
+        # Слово «ПОБЕДИЛИ»
+        win_word = fonts["win_sub"].render("ПОБЕДИЛИ", True, (255, 215, 0))
+        screen.blit(win_word, (card.centerx - win_word.get_width() // 2, card.y + 175))
+
+        # Разделитель
+        pygame.draw.line(screen, winner_color,
+                         (card.centerx - 260, card.y + 220),
+                         (card.centerx + 260, card.y + 220), 2)
+
+        # Причина победы
+        reason = get_win_reason()
+        reason_surf = fonts["resource"].render(reason, True, COLORS["text"])
+        screen.blit(reason_surf, (card.centerx - reason_surf.get_width() // 2, card.y + 240))
+
+        # Престиж и ходы
+        info = fonts["phrase"].render(
+            f"Престиж: {state.winner.prestige}    Ходов: {state.turn} / {MAX_TURNS}",
+            True, (180, 180, 190),
+        )
+        screen.blit(info, (card.centerx - info.get_width() // 2, card.y + 285))
+
+        # Список выбывших
+        dead = [p for p in state.players if p.is_dead]
+        if dead:
+            dead_title = fonts["phrase"].render("Павшие под Кровавой Луной:", True, (160, 160, 170))
+            screen.blit(dead_title, (card.centerx - dead_title.get_width() // 2, card.y + 330))
+
+            names = "  •  ".join(p.name for p in dead)
+            names_surf = fonts["log"].render(names, True, COLORS["negative"])
+            screen.blit(names_surf, (card.centerx - names_surf.get_width() // 2, card.y + 365))
+
     else:
-        title = fonts["huge"].render("ИГРА ОКОНЧЕНА", True, COLORS["text"])
-        screen.blit(title, (WINDOW_WIDTH // 2 - title.get_width() // 2, 200))
+        # Никто не выжил (теоретически невозможно, но на всякий случай)
+        pygame.draw.rect(screen, COLORS["player1"], card, 3, border_radius=18)
 
+        skull = fonts["huge"].render("💀", True, COLORS["text"])
+        screen.blit(skull, (card.centerx - skull.get_width() // 2, card.y + 40))
+
+        title = fonts["huge"].render("НИКТО НЕ ВЫЖИЛ", True, COLORS["negative"])
+        screen.blit(title, (card.centerx - title.get_width() // 2, card.y + 130))
+
+        pygame.draw.line(screen, COLORS["player1"],
+                         (card.centerx - 220, card.y + 220),
+                         (card.centerx + 220, card.y + 220), 2)
+
+        quote = fonts["resource"].render(
+            "Кровавая Луна забрала всех...",
+            True, (180, 180, 190),
+        )
+        screen.blit(quote, (card.centerx - quote.get_width() // 2, card.y + 260))
+
+    # Кнопка — под карточкой
     color = COLORS["button_hover"] if over_btn_rect.collidepoint(mouse_pos) else COLORS["button"]
-    pygame.draw.rect(screen, color, over_btn_rect, border_radius=8)
-    pygame.draw.rect(screen, COLORS["player1"], over_btn_rect, 2, border_radius=8)
+    pygame.draw.rect(screen, color, over_btn_rect, border_radius=10)
+    pygame.draw.rect(screen, (255, 215, 0), over_btn_rect, 2, border_radius=10)
     draw_text_centered(screen, "ИГРАТЬ СНОВА", over_btn_rect, fonts["button"], COLORS["text"])
 
 
 def current_screen_global():
     global current_screen
     current_screen = SCREEN_OVER
+    clear_fireworks()
+    spawn_firework(WINDOW_WIDTH // 2, 300)
 
 
 # === ГЛАВНЫЙ ЦИКЛ ===
@@ -541,10 +694,15 @@ def main():
     while running:
         dt = clock.tick(FPS) / 1000.0
 
+        # Всплывающие цифры
         for ft in floating_texts[:]:
             ft.update(dt)
             if ft.dead:
                 floating_texts.remove(ft)
+
+        # Салют на экране победы
+        if current_screen == SCREEN_OVER:
+            update_fireworks(dt)
 
         mouse_pos = pygame.mouse.get_pos()
         clicked = False
@@ -586,6 +744,7 @@ def main():
                 state.__init__()
                 game_state = STATE_ACTION
                 floating_texts = []
+                clear_fireworks()
                 current_screen = SCREEN_START
 
         pygame.display.flip()
