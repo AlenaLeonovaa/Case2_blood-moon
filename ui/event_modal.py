@@ -88,25 +88,26 @@ def draw_event_modal(screen, event, mouse_pos, continue_rect, fonts):
 
     # Эффекты
     effect_str = event["effect"]
-    parts = effect_str.split(": ", 1)
-    effects_text = parts[1] if len(parts) == 2 else effect_str
-    pieces = [p.strip() for p in effects_text.split(",")]
+    if effect_str:
+        parts = effect_str.split(": ", 1)
+        effects_text = parts[1] if len(parts) == 2 else effect_str
+        pieces = [p.strip() for p in effects_text.split(",")]
 
-    for piece in pieces:
-        ru_piece = translate(piece)
-        if "−" in piece or "-" in piece:
-            color = COLORS["negative"]
-            prefix = "▼"
-        elif "+" in piece:
-            color = COLORS["positive"]
-            prefix = "▲"
-        else:
-            color = COLORS["text"]
-            prefix = "●"
+        for piece in pieces:
+            ru_piece = translate(piece)
+            if "−" in piece or "-" in piece:
+                color = COLORS["negative"]
+                prefix = "▼"
+            elif "+" in piece:
+                color = COLORS["positive"]
+                prefix = "▲"
+            else:
+                color = COLORS["text"]
+                prefix = "●"
 
-        surf_text = fonts["event_effect"].render(f"{prefix}  {ru_piece}", True, color)
-        screen.blit(surf_text, (card.centerx - surf_text.get_width() // 2, y))
-        y += 45
+            surf_text = fonts["event_effect"].render(f"{prefix}  {ru_piece}", True, color)
+            screen.blit(surf_text, (card.centerx - surf_text.get_width() // 2, y))
+            y += 45
 
     # Кнопка
     hover = continue_rect.collidepoint(mouse_pos)
