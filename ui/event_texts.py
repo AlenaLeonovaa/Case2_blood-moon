@@ -60,7 +60,9 @@ EVENT_STORIES = {
 
 
 def get_phrase(is_positive):
-    """Случайная фраза по тону события."""
+    """Случайная фраза по тону события. Если тон неизвестен — нейтральная."""
+    if is_positive is None:
+        return "Луна наблюдает"
     pool = POSITIVE_PHRASES if is_positive else NEGATIVE_PHRASES
     return random.choice(pool)
 
