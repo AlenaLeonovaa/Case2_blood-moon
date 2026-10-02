@@ -126,8 +126,8 @@ def make_action_buttons():
     sx = (WINDOW_WIDTH - total) // 2
     for i, action in enumerate(ACTIONS):
         x = sx + i * (BUTTON_WIDTH + BUTTON_SPACING)
-        rect = pygame.Rect(x, 620, BUTTON_WIDTH, BUTTON_HEIGHT)
-        buttons.append({"rect": rect, "action": action})
+        rect = pygame.Rect(x, 600, BUTTON_WIDTH, 70)  # выше
+        buttons.append({"rect": rect, "action": action, "hover_anim": 0.0})
     return buttons
 
 
@@ -387,21 +387,32 @@ def draw_game(mouse_pos, clicked, click_pos):
 
     # ВЫБОР ДЕЙСТВИЯ
     elif game_state == STATE_ACTION:
-        for btn in action_buttons:
+            for btn in action_buttons:
             hover = btn["rect"].collidepoint(mouse_pos)
             afford = player.can_afford(btn["action"].cost)
+
+            # Плавная анимация
+            target_anim = 1.0 if hover and afford else 0.0
+            btn["hover_anim"] += (target_anim - btn["hover_anim"]) * 0.25
+            anim = btn["hover_anim"]
+
+            # Размер увеличивается при hover
+            grow = int(8 * anim)
+            rect = btn["rect"].inflate(grow * 2, grow * 2)
+
             if not afford:
                 color = COLORS["disabled"]
-            elif hover:
-                color = COLORS["button_hover"]
+                border_col = (60, 60, 80)
             else:
-                color = COLORS["button"]
-            pygame.draw.rect(screen, color, btn["rect"], border_radius=8)
-            draw_text_centered(screen, btn["action"].title, btn["rect"],
-                               fonts["button"], COLORS["text"])
+                base = COLORS["button"]
+                hi = COLORS["button_hover"]
+                color = tuple(int(base[i] + (hi[i] - base[i]) * anim) for i in range(3))
+                border_col = COLORS["player1"] if afford else (60, 60, 80)
 
-        hint = fonts["resource"].render("Выберите действие", True, COLORS["text"])
-        screen.blit(hint, (WINDOW_WIDTH // 2 - hint.get_width() // 2, 580))
+            pygame.draw.rect(screen, color, rect, border_radius=10)
+            pygame.draw.rect(screen, border_col, rect, 2, border_radius=10)
+            draw_text_centered(screen, btn["action"]["title"], rect,
+                               fonts["button"], COLORS["text"])
 
         if clicked:
             for btn in action_buttons:
