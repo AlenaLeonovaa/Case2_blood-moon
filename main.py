@@ -504,4 +504,89 @@ def draw_game_over(mouse_pos):
     screen.blit(overlay, (0, 0))
 
     if state.winner:
-        title = fonts["huge"].render("ПОБЕДА!", True, COLORS
+        title = fonts["huge"].render("ПОБЕДА!", True, COLORS["positive"])
+        screen.blit(title, (WINDOW_WIDTH // 2 - title.get_width() // 2, 200))
+
+        name = fonts["title"].render(f"{state.winner.name}", True, get_player_color(state.winner))
+        screen.blit(name, (WINDOW_WIDTH // 2 - name.get_width() // 2, 300))
+
+        prest = fonts["resource"].render(
+            f"Престиж: {state.winner.prestige}", True, COLORS["text"])
+        screen.blit(prest, (WINDOW_WIDTH // 2 - prest.get_width() // 2, 350))
+    else:
+        title = fonts["huge"].render("ИГРА ОКОНЧЕНА", True, COLORS["text"])
+        screen.blit(title, (WINDOW_WIDTH // 2 - title.get_width() // 2, 200))
+
+    color = COLORS["button_hover"] if over_btn_rect.collidepoint(mouse_pos) else COLORS["button"]
+    pygame.draw.rect(screen, color, over_btn_rect, border_radius=8)
+    pygame.draw.rect(screen, COLORS["player1"], over_btn_rect, 2, border_radius=8)
+    draw_text_centered(screen, "ИГРАТЬ СНОВА", over_btn_rect, fonts["button"], COLORS["text"])
+
+
+def current_screen_global():
+    global current_screen
+    current_screen = SCREEN_OVER
+
+
+# === ГЛАВНЫЙ ЦИКЛ ===
+def main():
+    global current_screen, game_state, floating_texts
+
+    running = True
+    while running:
+        dt = clock.tick(FPS) / 1000.0
+
+        for ft in floating_texts[:]:
+            ft.update(dt)
+            if ft.dead:
+                floating_texts.remove(ft)
+
+        mouse_pos = pygame.mouse.get_pos()
+        clicked = False
+        click_pos = (0, 0)
+
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                running = False
+            if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                clicked = True
+                click_pos = e.pos
+
+        if current_screen == SCREEN_START:
+            draw_start(mouse_pos)
+            if clicked:
+                if start_btn_rect.collidepoint(click_pos):
+                    current_screen = SCREEN_LORE
+                elif rules_btn_rect.collidepoint(click_pos):
+                    current_screen = SCREEN_RULES
+
+        elif current_screen == SCREEN_LORE:
+            draw_lore(mouse_pos)
+            if clicked and lore_continue_rect.collidepoint(click_pos):
+                current_screen = SCREEN_GAME
+                floating_texts = []
+                start_new_turn()
+
+        elif current_screen == SCREEN_RULES:
+            draw_rules(mouse_pos)
+            if clicked and back_btn_rect.collidepoint(click_pos):
+                current_screen = SCREEN_START
+
+        elif current_screen == SCREEN_GAME:
+            draw_game(mouse_pos, clicked, click_pos)
+
+        elif current_screen == SCREEN_OVER:
+            draw_game_over(mouse_pos)
+            if clicked and over_btn_rect.collidepoint(click_pos):
+                state.__init__()
+                game_state = STATE_ACTION
+                floating_texts = []
+                current_screen = SCREEN_START
+
+        pygame.display.flip()
+
+    pygame.quit()
+
+
+if __name__ == "__main__":
+    main()
