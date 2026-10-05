@@ -20,6 +20,7 @@ from ui.floating import FloatingText, snapshot, diff
 
 # === ИНИЦИАЛИЗАЦИЯ ===
 pygame.init()
+pygame.mixer.init()
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Кровавая Луна")
 clock = pygame.time.Clock()
@@ -30,6 +31,17 @@ background = pygame.transform.scale(background, (WINDOW_WIDTH, WINDOW_HEIGHT))
 
 game_background = pygame.image.load("assets/game_background.jpeg")
 game_background = pygame.transform.scale(game_background, (WINDOW_WIDTH, WINDOW_HEIGHT))
+
+# === МУЗЫКА ===
+def play_music(filename, volume=0.4):
+    try:
+        pygame.mixer.music.load(f"assets/music/{filename}")
+        pygame.mixer.music.set_volume(volume)
+        pygame.mixer.music.play(-1)
+    except pygame.error:
+        pass
+
+play_music("menu_music.mp3")
 
 # === ИКОНКИ ===
 def load_icon(name):
@@ -687,6 +699,7 @@ def current_screen_global():
     current_screen = SCREEN_OVER
     clear_fireworks()
     spawn_firework(WINDOW_WIDTH // 2, 300)
+    play_music("win_music.mp3")
 
 
 # === ГЛАВНЫЙ ЦИКЛ ===
@@ -731,6 +744,7 @@ def main():
             if clicked and lore_continue_rect.collidepoint(click_pos):
                 current_screen = SCREEN_GAME
                 floating_texts = []
+                play_music("game_music.mp3")
                 start_new_turn()
 
         elif current_screen == SCREEN_RULES:
