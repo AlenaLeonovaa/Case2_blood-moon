@@ -22,21 +22,23 @@
 
 3. Автотесты (pytest)
 
-Файл tests/test_logic.py содержит 11 тестов:
+Файл tests/test_logic.py содержит 13 тестов:
 
 | Тест | Что проверяет | Ожидание |
 |------|---------------|----------|
-| test_player_initialization | Стартовые ресурсы | 10/10/5/10/0 |
+| test_player_initialization | Стартовые ресурсы игрока | 10/10/5/10/0 |
 | test_prestige_formula | Формула престижа | 5*2 + 10//5 + 10//5 - 0 = 14 |
 | test_death_by_smuta | Смерть при смуте 10 | is_dead == True |
 | test_death_by_people | Смерть при народе 0 | is_dead == True |
-| test_can_afford | Хватает ли ресурсов | True при 5 ≥ 3, False при 5 < 10 |
+| test_can_afford | Хватает ли ресурсов на действие | True при 5 ≥ 3, False при 5 < 10 |
 | test_action_alliance | Союз: −1 смута обоим, не ниже 0 | smuta 5→4, 0→0 |
 | test_action_trade | Торговля: −3 деньги, +3 еда | money 10→7, food 5→8 |
-| test_action_raid | Набег: −1 народ, −2 еда цели, +1 смута | 10→9, 10→8, 0→1 |
+| test_action_raid | Набег: −1 народ, −2 еда цели, +1 смута | people 10→9, food 10→8, smuta 0→1 |
 | test_action_bribe | Подкуп: −3 деньги, −2 смуты цели | money 10→7, smuta 5→3 |
 | test_action_discord | Раздор: −2 деньги, +2 смуты цели | money 10→8, smuta 2→4 |
-| test_roll_event_distribution | Вероятность ~50/50 | 400 < positives < 600 из 1000 |
+| test_roll_event_distribution | Вероятность позитив/негатив ~50/50 | 400 < positives < 600 из 1000 |
+| test_snapshot | Снимок ресурсов игрока (snapshot) | food=10, money=5, land=5 |
+| test_diff | Вычисление разницы ресурсов (diff) | [("food", -3)] |
 
 4. Чек-лист ручного тестирования
 
