@@ -1,6 +1,7 @@
 import pytest
 from models.player import Player
 from logic.events_pool import action_alliance, action_trade, action_raid, action_bribe, action_discord, roll_event
+from ui.floating import snapshot, diff
 
 
 #Тесты для класса PLAYER (models/player.py)
@@ -131,3 +132,20 @@ def test_roll_event_distribution():
 
     # Проверяем, что отклонение от 50% не больше 10% (для 1000 итераций)
     assert 400 < positives < 600
+def test_snapshot():
+    """Проверка снимка ресурсов игрока"""
+    p = Player("Тест", {"name": "Вампиры", "color_key": "player1", "resource_name": "Кровь"})
+    p.food = 10
+    p.money = 5
+    snap = snapshot(p)
+    assert snap["food"] == 10
+    assert snap["money"] == 5
+    assert snap["land"] == 5
+
+
+def test_diff():
+    """Проверка вычисления разницы ресурсов"""
+    before = {"food": 10, "money": 5, "land": 5, "people": 10, "smuta": 0}
+    after = {"food": 7, "money": 5, "land": 5, "people": 10, "smuta": 0}
+    changes = diff(before, after)
+    assert changes == [("food", -3)]
